@@ -1,0 +1,306 @@
+---
+title: "Evidencia02"
+author: "Jose Emilio Martinez   A01403100"
+date: "2024-05-05"
+output: html_document
+---
+
+
+Video
+https://drive.google.com/drive/folders/1hgX7DMSHQ0fvWbe4XdJpIHlBFa1IzWVY?usp=sharing
+
+
+
+Yo seleccione el caso de las 20 variantes por paises pero adopte una idea que me dio la maestra la cual es agarrar 10 paises y sus variantes y ademas compararlas con año, en este caso 2020 y 2021, para que asi podamos tener tanto un analisis temporal como de paises 
+
+Cargar las librerias necesarias y cargar los archivos fasta de cada uno de nuestras variables 
+```{r}
+library(Biostrings)
+library(seqinr)
+library(adegenet)
+library(ape)
+library(ggtree)
+library(DECIPHER)
+library(viridis)
+library(ggplot2)
+
+setwd("C://Users//Josem//Documents//Tec//Semestre 2//Biologia computacional//Evidencia02")
+
+USA_1 = read.fasta("USA_1.fasta")
+USA_2 = read.fasta("USA_2.fasta")
+IND_1= read.fasta("IND_1.fasta")
+IND_2= read.fasta("IND_2.fasta")
+FRA_1= read.fasta("FRA_1.fasta")
+FRA_2= read.fasta("FRA_2.fasta")
+DEU_1= read.fasta("DEU_1.fasta")
+DEU_2= read.fasta("DEU_2.fasta")
+BRA_1= read.fasta("BRA_1.fasta")
+BRA_2= read.fasta("BRA_2.fasta")
+JPN_1= read.fasta("JPN_1.fasta")
+JPN_2= read.fasta("JPN_2.fasta")
+ITA_1= read.fasta("ITA_1.fasta")
+ITA_2= read.fasta("ITA_2.fasta")
+UK_1= read.fasta("UK_1.fasta")
+UK_2= read.fasta("UK_2.fasta")
+RUS_1= read.fasta("RUS_1.fasta")
+RUS_2= read.fasta("RUS_2.fasta")
+ESP_1= read.fasta("ESP_1.fasta")
+ESP_2= read.fasta("ESP_2.fasta")
+```
+
+
+En esta parte las vamos a cargar a partir de GenBank para mas facilidad al hacer el arbol filogenetico 
+```{r}
+virus = c("PP162781","PP162212","MT940458","MZ702552","OR322150","ON291137","OM453862","OM463595","OR856800","OR856811","OM816720","OM816721","OP288475","OR761900","OV089521","OV081111","PP754061","PP158727","MT953879","MW715080")
+virus_sequences <- read.GenBank(virus)
+str(virus_sequences)
+```
+
+En lo nombres de las variantes por pais omitiremos especificar que es un SARS-Cov-2 por el hecho que todos son de este tipo mas especificaremos el lugar y el año 
+```{r}
+names(virus_sequences) = c("USA/SEARCH-9093/2020","USA/SEARCH-8069/2021","IND/GBRC329/2020","IND/GBRC1230/2021","FRA/IHUCOVID-001144/2020","FRA/IHUCOVID-045094_Nova1/2021","DEU/C447/2020","DEU/C1225/2021","BRA/ViroUNIFESP-V017-B/2020","BRA/ViroUNIFESP-V514-B/2021","JPN/JP_HiroFH173c/2020","JPN/JP_HiroFH183c/2021","ITA/D2_2_B_1_177/2020","ITA/AM-0424/2021","UK/Monopartite/2020","UK/Monopartite/2021","RUS/Primorye_4402/2020","RUS/Primorye_5855/2021","ESP/HUD-79063144/2020","ESP/HUD-79270571/2021")
+attributes(virus_sequences)
+names(virus_sequences)
+attr(virus_sequences, "species")
+```
+Longitud de las variables
+```{r}
+longitud = function(genoma,i){
+  print(names(genoma[i]))
+  print(length(genoma[[i]]))
+}
+
+longitud(virus_sequences,1)
+longitud(virus_sequences,2)
+longitud(virus_sequences,3)
+longitud(virus_sequences,4)
+longitud(virus_sequences,5)
+longitud(virus_sequences,6)
+longitud(virus_sequences,7)
+longitud(virus_sequences,8)
+longitud(virus_sequences,9)
+longitud(virus_sequences,10)
+longitud(virus_sequences,11)
+longitud(virus_sequences,12)
+longitud(virus_sequences,13)
+longitud(virus_sequences,14)
+longitud(virus_sequences,15)
+longitud(virus_sequences,16)
+longitud(virus_sequences,17)
+longitud(virus_sequences,18)
+longitud(virus_sequences,19)
+longitud(virus_sequences,20)
+```
+En esta parte del codigo vamos a convertir nuestras secuencias a un archivo fasta para su posterior analisis 
+```{r}
+write.dna(virus_sequences,  file ="virus_seqs.fasta", format = "fasta", append =
+FALSE, nbcol = 6, colsep = " ", colw = 10)
+
+virus_seq_no_alineadas <- readDNAStringSet("virus_seqs.fasta", format = "fasta")
+```
+
+
+Generacion de una funcion para sacar los numeros de Adenina, Guanina, Citosina y Timina 
+
+```{r}
+nucleo_A <- function(genoma){
+  as.numeric((count(genoma[[1]],1))[1])
+}
+nucleo_C <- function(genoma){
+  as.numeric((count(genoma[[1]],1))[2])
+}
+nucleo_G<- function(genoma){
+  as.numeric((count(genoma[[1]],1))[3])
+}
+nucleo_T <- function(genoma){
+  as.numeric((count(genoma[[1]],1))[4])
+}
+
+```
+
+Generacion de un data base para la grafica 
+
+```{r}
+
+DATA = data.frame(
+    Virus = c("USA/2020","USA/2021","IND/2020","IND/2021","FRA/2020","FRA/2021","DEU/2020","DEU/2021","BRA/2020","BRA/2021","JPN/2020","JPN/2021","ITA/2020","ITA/2021","UK/2020","UK/2021","RUS/2020","RUS/2021","ESP/2020","ESP/2021"),
+    
+ A = c(nucleo_A(USA_1),nucleo_A(USA_2),nucleo_A(IND_1),nucleo_A(IND_2),nucleo_A(FRA_1),nucleo_A(FRA_2),nucleo_A(DEU_1),nucleo_A(DEU_2),nucleo_A(BRA_1),nucleo_A(BRA_2),nucleo_A(JPN_1),nucleo_A(JPN_2),nucleo_A(ITA_1),nucleo_A(ITA_2),nucleo_A(UK_1),nucleo_A(UK_2),nucleo_A(RUS_1),nucleo_A(RUS_2),nucleo_A(ESP_1),nucleo_A(ESP_2)),
+ 
+ C = c(nucleo_C(USA_1),nucleo_C(USA_2),nucleo_C(IND_1),nucleo_C(IND_2),nucleo_C(FRA_1),nucleo_C(FRA_2),nucleo_C(DEU_1),nucleo_C(DEU_2),nucleo_C(BRA_1),nucleo_C(BRA_2),nucleo_C(JPN_1),nucleo_C(JPN_2),nucleo_C(ITA_1),nucleo_C(ITA_2),nucleo_C(UK_1),nucleo_C(UK_2),nucleo_C(RUS_1),nucleo_C(RUS_2),nucleo_C(ESP_1),nucleo_C(ESP_2)),
+ 
+ G = c(nucleo_G(USA_1),nucleo_G(USA_2),nucleo_G(IND_1),nucleo_G(IND_2),nucleo_G(FRA_1),nucleo_G(FRA_2),nucleo_G(DEU_1),nucleo_G(DEU_2),nucleo_G(BRA_1),nucleo_G(BRA_2),nucleo_G(JPN_1),nucleo_G(JPN_2),nucleo_G(ITA_1),nucleo_G(ITA_2),nucleo_G(UK_1),nucleo_G(UK_2),nucleo_G(RUS_1),nucleo_G(RUS_2),nucleo_G(ESP_1),nucleo_G(ESP_2)),
+ 
+ T = c(nucleo_T(USA_1),nucleo_T(USA_2),nucleo_T(IND_1),nucleo_T(IND_2),nucleo_T(FRA_1),nucleo_T(FRA_2),nucleo_T(DEU_1),nucleo_T(DEU_2),nucleo_T(BRA_1),nucleo_T(BRA_2),nucleo_T(JPN_1),nucleo_T(JPN_2),nucleo_T(ITA_1),nucleo_T(ITA_2),nucleo_T(UK_1),nucleo_T(UK_2),nucleo_T(RUS_1),nucleo_T(RUS_2),nucleo_T(ESP_1),nucleo_T(ESP_2))
+)
+
+print(DATA)
+```
+Generacion de la grafica 
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(reshape)
+library(scales)
+
+
+DATA$category <- row.names(DATA)
+mdfr <- melt(DATA, id.vars = "category")
+
+data <- DATA %>% pivot_longer(., cols = c(A,C,G,T))
+colnames(data)[3] <- "type"
+
+
+ggplot(data, aes(x = as.factor(Virus), y = value)) +
+geom_bar(stat = 'identity', position = 'stack',
+aes(fill = type)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 20))+
+  
+  labs(title="Variantes del SARS-Covid 2021/2022 por cada pais",
+        x ="Variants", y = "Number of nucleotides", fill = "Nucleotides")+ 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+
+
+```
+
+En esta gráfica podemos ver las diferentes variantes de cada país, cabe recalcar que para este análisis lo que hice fue buscar la variable con más estudios o más predominante en los países con más contagios y a partir de ahí lo que fui haciendo es buscar tanto en 2021 como en 2020 para así también tener un análisis temporal de las variables y ver cómo se relacionan también entre sí
+
+Para empezar podemos ver en esta gráfica que efectivamente todos son SARS-Cov-2 porque la cantidad de nucleótidos varía muy poquito aproximadamente todos están entre 29700 - 30000 pero recordemos que con que una base nitrogenada cambie es una variante 
+
+Aquí podemos ver, que en casi todas las variantes la proporción es algo igual en cada base nitrogenada pero recordemos que cualquier mínimo cambio en estas proporciones puede afectar en la estructura de la variante y en sus proteínas, para ser mas especifico la spike, en esta se puede ver mucha información acerca de la variante, por lo que podemos decir que por esto son variantes ya que en cada una las proporciones cambian y ya despues con el análisis del árbol filogenético vamos a poder ver cómo es que se relacionan cada una más a detalle 
+
+En conclusión, podemos decir que según lo que podemos ver en la gráficas estas si son variantes ya que aunque tengan casi la misma proporción de bases nitrogenadas su número en general cambia por ejemplo las variantes en Francia son las que menos nucleótidos tienen con 29700 aprox y esta varianza es lo que los hace variantes, ya que en un contexto general son muy iguales pero viéndolos más a detalle si varían 
+
+
+
+
+
+Para el arbol filogenetico alineamos los nucleotidos de cada secuencia
+```{r}
+virus_seq_no_alineadas <- OrientNucleotides(virus_seq_no_alineadas)
+
+virus_align_seqs <- AlignSeqs(virus_seq_no_alineadas)
+```
+```{r}
+writeXStringSet(virus_align_seqs, file = "virus_align_seq.fasta")
+virus_aligned <- read.alignment("virus_align_seq.fasta", format = "fasta")
+```
+
+```{r}
+matriz_distancia <- dist.alignment(virus_aligned, matrix = "similarity")
+
+```
+
+Creación del árbol con el paquete ape:
+```{r}
+virus_filogenetico <- nj(matriz_distancia)
+class(virus_filogenetico)
+
+```
+
+
+Combina el árbol filogenético con el alineamiento de las secuencias:
+```{r}
+virus_plot_filogenetico <- ladderize(virus_filogenetico)
+plot_virus <- ggtree(virus_plot_filogenetico ) + geom_tiplab()+xlim(c(NA, .037))
+ggsave("arbolfilogenetico.jpeg", width = 29, height = 8)
+plot_virus
+
+```
+Aquí tenemos el árbol filogenético de las diferentes variantes con las que hemos trabajado, para empezar primero hay que dejar claro una definición fundamental para este análisis que es el de longitud de rama, esta representa la cantidad de cambios evolutivos que han ocurrido a lo largo de esa rama desde el ancestro común más reciente de los organismos en esa rama. Estos cambios pueden ser, por ejemplo, mutaciones genéticas, inserciones o deleciones de bases en el ADN, o cambios morfológicos.Es importante tener en cuenta que la distancia horizontal no siempre se correlaciona directamente con el tiempo, ya que la tasa de cambio evolutivo puede variar entre diferentes linajes y a lo largo del tiempo. 
+
+En general en todo el árbol filogenético podemos ver que la longitud de rama siempre va a ser mayor en las variables de 2021 que las de 2020 respectivamente en cada país esto por lo antes dicho ya que estos pueden presentar más cambios evolutivos. Pero podemos ver que en el caso de Brasil la rama de 2020 es más larga esto no necesariamente tiene que indicar que hay una relación directa con el tiempo como lo que habíamos definido antes 
+
+Podemos empezar analizando que aunque todos se supone que tienen que tener un ancestro en común, podemos analizar estos más a profundidad. Las variantes de Estados Unidos, Japón, Reino Unido, Rusia y Brasil tienen el mismo ancestro en común.
+
+Profundizando más en esta rama podemos ver que las variables de estados Unidos esta estrechamente relacionadas con la de japón ya que estos tienen una longitud de rama parecida, aunque las de Japón en general tienen más cambios evolutivos
+
+En el caso de Gran Bretaña este se desprende del mismo ancestro que el de Brasil y Rusia, pero estos últimos dos se desprenden del mismo ancestro por lo cual están más relacionados 
+
+Pasando para el otro lado que es el más interesante podemos ver que una de las variantes de italia, la de 2021 se separó de su otra variable puede ser que esta al tener un cambio evolutivo más significativo se haya alejado de la otra pero esto no significa que no sean variantes parecidas o iguales. Después podemos ver que pasa algo parecido con la de alemania del 2021 pero esta si esta mas cerca en ancestros comunes a comparación de la de Italia. Aquí podemos ver que la de España tiene el mismo ancestro común que la de Italia y Alemania. La variable de Italia y Alemania de 2020 son estrechamente iguales ya que viene del mismo ancestro podemos tratar deducir esto ya que son de los primeros países que fueron afectados y los dos están en europa 
+
+Por último podemos ver que las de Francia e India vienen del mismo ancestro en comun, claro que esto depende mucho de la variable que se haya colocado ya que en los países hubo diferentes variantes, pero para este caso podemos ver que las dos se parecen mucho aunque la de Francia tiene una longitud de rama mayor lo que puede significar que haya tenido más cambios evolutivos 
+
+En conclusion podemos decir que si tiene importancia y si afecta el factor que sean de diferentes paises y que sean de diferentes años como pudimos ver ya que algunas estaban estrechamente relacionadas con otras por sus antecesores y en el caso del año podemos ver que las variables al ser relativamnete mas nuevas han sufrifo mas mutaciones o cambios evolutivos lo que podemos apreciar gracias a la longitud de rama
+
+
+
+
+Referencias
+
+-USA(B.1.429/Epsilon)
+https://www.ncbi.nlm.nih.gov/nuccore/PP162781
+
+https://www.ncbi.nlm.nih.gov/nuccore/PP162212
+
+
+-INDIA(B.1.36.8)
+https://www.ncbi.nlm.nih.gov/nuccore/MT940458
+
+https://www.ncbi.nlm.nih.gov/nuccore/MZ702552
+
+-FRANCIA(B.1.160)
+https://www.ncbi.nlm.nih.gov/nuccore/OR322150
+https://www.ncbi.nlm.nih.gov/nuccore/ON291137
+
+ALEMANIA(B.1.177)
+https://www.ncbi.nlm.nih.gov/nuccore/OM453862
+https://www.ncbi.nlm.nih.gov/nuccore/OM463595
+
+
+BRAZIL(P.2)
+https://www.ncbi.nlm.nih.gov/nuccore/OR856800
+https://www.ncbi.nlm.nih.gov/nuccore/OR856811
+
+JAPAN(AY.29)
+https://www.ncbi.nlm.nih.gov/nuccore/OM816720
+https://www.ncbi.nlm.nih.gov/nuccore/OM816721
+
+ITALIA(B.1.177)
+https://www.ncbi.nlm.nih.gov/nuccore/OP288475
+https://www.ncbi.nlm.nih.gov/nuccore/OR761900
+
+UK
+https://www.ncbi.nlm.nih.gov/nuccore/OV089521
+https://www.ncbi.nlm.nih.gov/nuccore/OV081111
+RUSSIA
+https://www.ncbi.nlm.nih.gov/nuccore/PP754061
+https://www.ncbi.nlm.nih.gov/nuccore/PP158727
+
+
+ESPAÑA
+https://www.ncbi.nlm.nih.gov/nuccore/MT953879
+https://www.ncbi.nlm.nih.gov/nuccore/MW715080
+
+
+SOUTHAFRICA
+https://www.ncbi.nlm.nih.gov/nuccore/PP518928
+https://www.ncbi.nlm.nih.gov/nuccore/OM765534
+
+MEXICO
+https://www.ncbi.nlm.nih.gov/nuccore/OL790173
+https://www.ncbi.nlm.nih.gov/nuccore/OK436539
+
+Rabaan AA, Al-Ahmed SH, Haque S, Sah R, Tiwari R, Malik YS, Dhama K, Yatoo MI, Bonilla-Aldana DK, Rodriguez-Morales AJ. SARS-CoV-2, SARS-CoV, and MERS-COV: A comparative overview. Infez Med. 2020 Ahead Of Print Jun 1;28(2):174-184. PMID: 32275259.
+
+Hasöksüz M, Kiliç S, Saraç F. Coronaviruses and SARS-COV-2. Turk J Med Sci. 2020 Apr 21;50(SI-1):549-556. doi: 10.3906/sag-2004-127. PMID: 32293832; PMCID: PMC7195990.
+
+Temmam S, Vongphayloth K, Baquero E, Munier S, Bonomi M, Regnault B, Douangboubpha B, Karami Y, Chrétien D, Sanamxay D, Xayaphet V, Paphaphanh P, Lacoste V, Somlor S, Lakeomany K, Phommavanh N, Pérot P, Dehan O, Amara F, Donati F, Bigot T, Nilges M, Rey FA, van der Werf S, Brey PT, Eloit M. Bat coronaviruses related to SARS-CoV-2 and infectious for human cells. Nature. 2022 Apr;604(7905):330-336. doi: 10.1038/s41586-022-04532-4. Epub 2022 Feb 16. Erratum in: Nature. 2022 Jul;607(7920):E19. PMID: 35172323.
+
+Lvov DK, Alkhovsky SV. [Source of the COVID-19 pandemic: ecology and genetics of coronaviruses (Betacoronavirus: Coronaviridae) SARS-CoV, SARS-CoV-2 (subgenus Sarbecovirus), and MERS-CoV (subgenus Merbecovirus).]. Vopr Virusol. 2020;65(2):62-70. Russian. doi: 10.36233/0507-4088-2020-65-2-62-70. PMID: 32515561.
+
+```{r}
+citation("Biostrings")
+citation("seqinr")
+citation("adegenet")
+citation("ape")
+citation("ggtree")
+citation("DECIPHER")
+citation("viridis")
+citation("ggplot2")
+citation("tidyverse")
+citation("ggplot2")
+citation("reshape")
+citation("scales")
+
+```
